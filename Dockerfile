@@ -47,7 +47,9 @@ RUN apt-get update && apt-get install -y \
         opcache \
         gd \
         pcntl \
+    && a2dismod mpm_event \
     && a2enmod \
+        mpm_prefork \
         rewrite \
         headers \
         proxy \
