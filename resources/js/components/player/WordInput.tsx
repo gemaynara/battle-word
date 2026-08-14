@@ -1,0 +1,112 @@
+import { useState, useRef, FormEvent, KeyboardEvent } from 'react';
+
+interface WordInputProps {
+  onSubmit: (word: string) => void;
+  disabled?: boolean;
+}
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'row' as const,
+    gap: '8px',
+    padding: '12px 16px',
+    backgroundColor: '#1e293b',
+    borderTop: '1px solid #334155',
+    position: 'sticky' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  input: {
+    flex: 1,
+    padding: '12px 14px',
+    fontSize: '16px',
+    borderRadius: '8px',
+    border: '2px solid #334155',
+    backgroundColor: '#0f172a',
+    color: '#f8fafc',
+    outline: 'none',
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+  },
+  button: {
+    minWidth: '44px',
+    minHeight: '44px',
+    padding: '12px 16px',
+    fontSize: '14px',
+    fontWeight: '600' as const,
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: '#6366f1',
+    color: '#ffffff',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    whiteSpace: 'nowrap' as const,
+  },
+  buttonDisabled: {
+    backgroundColor: '#475569',
+    cursor: 'not-allowed' as const,
+    opacity: 0.6,
+  },
+};
+
+export default function WordInput({ onSubmit, disabled = false }: WordInputProps) {
+  const [value, setValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = () => {
+    const trimmed = value.trim();
+    if (!trimmed || disabled) return;
+    onSubmit(trimmed.toUpperCase());
+    setValue('');
+    inputRef.current?.focus();
+  };
+
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    handleSubmit();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <form style={styles.container} onSubmit={handleFormSubmit}>
+      <input
+        ref={inputRef}
+        type="text"
+        style={styles.input}
+        value={value}
+        onChange={(e) => setValue(e.target.value.toUpperCase())}
+        onKeyDown={handleKeyDown}
+        maxLength={15}
+        placeholder="Digite uma palavra..."
+        disabled={disabled}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        autoFocus
+      />
+      <button
+        type="submit"
+        style={{
+          ...styles.button,
+          ...(disabled ? styles.buttonDisabled : {}),
+        }}
+        disabled={disabled}
+        aria-label="Enviar palavra"
+      >
+        Enviar
+      </button>
+    </form>
+  );
+}
