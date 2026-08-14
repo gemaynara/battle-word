@@ -3,6 +3,18 @@
 # =========================================================
 FROM node:22-alpine AS frontend
 
+ARG VITE_REVERB_APP_KEY=word-battle-key
+ARG VITE_REVERB_HOST=battle-word-production.up.railway.app
+ARG VITE_REVERB_PORT=443
+ARG VITE_REVERB_SCHEME=https
+ARG VITE_APP_NAME=WordBattle
+
+ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY}
+ENV VITE_REVERB_HOST=${VITE_REVERB_HOST}
+ENV VITE_REVERB_PORT=${VITE_REVERB_PORT}
+ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+
 WORKDIR /app
 
 COPY package*.json ./
