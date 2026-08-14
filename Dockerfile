@@ -47,7 +47,7 @@ RUN apt-get update && apt-get install -y \
         opcache \
         gd \
         pcntl \
-    && a2dismod mpm_event \
+    && a2dismod mpm_event mpm_worker || true \
     && a2enmod \
         mpm_prefork \
         rewrite \
@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y \
         proxy \
         proxy_http \
         proxy_wstunnel \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* \
     && rm -rf /var/lib/apt/lists/*
 
 # Composer
