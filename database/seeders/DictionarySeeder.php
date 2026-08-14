@@ -16,22 +16,16 @@ class DictionarySeeder extends Seeder
     {
         $words = $this->getWords();
 
-        $chunks = array_chunk($words, 100);
-
-        foreach ($chunks as $chunk) {
-            $records = array_map(function (string $word) {
-                $normalized = mb_strtoupper(trim($word));
-                return [
-                    'word' => $normalized,
+        foreach ($words as $word) {
+            $normalized = mb_strtoupper(trim($word));
+            DictionaryWord::firstOrCreate(
+                ['word' => $normalized],
+                [
                     'length' => mb_strlen($normalized),
                     'is_valid' => true,
                     'is_inappropriate' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }, $chunk);
-
-            DictionaryWord::upsert($records, ['word'], ['length', 'updated_at']);
+                ]
+            );
         }
 
         $this->command->info('Seeded ' . count($words) . ' Portuguese words.');
@@ -206,7 +200,7 @@ class DictionarySeeder extends Seeder
             'SUSTO', 'TANTO', 'TAQUE', 'TARDE', 'TARJA', 'TENDA', 'TENSO',
             'TERNO', 'TERRA', 'TESTA', 'TEXTO', 'TIGRE', 'TIMAO', 'TINTA',
             'TOLDO', 'TOMAR', 'TOQUE', 'TORCE', 'TOTAL', 'TOUCA', 'TRAÇO',
-            'TRAJE', 'TRAGO', 'TRAJE', 'TRAPO', 'TRAVO', 'TRECO', 'TREVO',
+            'TRAJE', 'TRAGO', 'TRAPO', 'TRAVO', 'TRECO', 'TREVO',
             'TRIBO', 'TRILHO','TROCA', 'TRONO', 'TROPA', 'TURMA', 'TURNO',
             'TUTELA','UIVAR', 'ULTRA', 'UMBRA', 'UNICO', 'UNIAO', 'UNTAR',
             'URGIR', 'URNA', 'USADO', 'USUAL', 'VAGAR', 'VALER', 'VALOR',

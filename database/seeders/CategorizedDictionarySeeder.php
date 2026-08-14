@@ -13,21 +13,17 @@ class CategorizedDictionarySeeder extends Seeder
         $total = 0;
 
         foreach ($categories as $category => $words) {
-            $chunks = array_chunk($words, 100);
-            foreach ($chunks as $chunk) {
-                $records = array_map(function (string $word) use ($category) {
-                    $normalized = mb_strtoupper(trim($word));
-                    return [
-                        'word' => $normalized,
+            foreach ($words as $word) {
+                $normalized = mb_strtoupper(trim($word));
+                DictionaryWord::firstOrCreate(
+                    ['word' => $normalized],
+                    [
                         'length' => mb_strlen($normalized),
                         'is_valid' => true,
                         'is_inappropriate' => false,
                         'category' => $category,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                }, $chunk);
-                DictionaryWord::upsert($records, ['word'], ['length', 'category', 'updated_at']);
+                    ]
+                );
             }
             $total += count($words);
             $this->command->info("  [{$category}] " . count($words) . ' palavras');
