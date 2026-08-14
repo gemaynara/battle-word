@@ -74,6 +74,9 @@ RUN composer install \
     --no-interaction \
     --prefer-dist
 
+# Criar .env vazio (Railway injeta vars via ambiente)
+RUN touch /var/www/html/.env
+
 # Copiar build do React/Vite
 COPY --from=frontend /app/public/build ./public/build
 
@@ -88,7 +91,8 @@ RUN mkdir -p \
         /var/www/html/storage \
         /var/www/html/bootstrap/cache
 
-# Configurar Apache na porta 10000
+# Configurar Apache para escutar na PORT do Railway
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 RUN echo 'Listen 10000' > /etc/apache2/ports.conf
 
 # Configuração Apache (VirtualHost)
