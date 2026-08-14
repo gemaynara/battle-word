@@ -20,7 +20,8 @@ RUN npm run build
 # =========================================================
 FROM php:8.3-apache
 
-ENV PORT=${PORT:-10000}
+ARG PORT=10000
+ENV PORT=${PORT}
 
 # Dependências do sistema
 RUN apt-get update && apt-get install -y \
@@ -87,9 +88,8 @@ RUN mkdir -p \
         /var/www/html/storage \
         /var/www/html/bootstrap/cache
 
-# Configurar Apache para usar variável de ambiente PORT
-RUN echo 'PassEnv PORT' >> /etc/apache2/apache2.conf
-RUN echo 'Listen ${PORT}' > /etc/apache2/ports.conf
+# Configurar Apache na porta 10000
+RUN echo 'Listen 10000' > /etc/apache2/ports.conf
 
 # Configuração Apache (VirtualHost)
 COPY docker/apache.conf \
