@@ -31,6 +31,7 @@ class RoundManager
      * Create a new round for the given game using LetterSetGenerator.
      * Sets status to "waiting" and calculates the next round_number.
      * Difficulty increases with each round (level = round_number, capped at 4).
+     * Letters are not shuffled until a player reaches 500+ total score.
      */
     public function createRound(Game $game): GameRound
     {
@@ -40,7 +41,11 @@ class RoundManager
         // Get category from game settings
         $category = $game->settings['category'] ?? null;
 
-        $letterSet = $this->letterSetGenerator->generate($level, $category);
+        // Only shuffle letters if any player has reached 500+ points
+        $maxPlayerScore = $game->players()->max('total_score') ?? 0;
+        $shouldShuffle = $maxPlayerScore >= 500;
+
+        $letterSet = $this->letterSetGenerator->generate($level, $category, $shouldShuffle);
         $duration = self::DURATION_BY_LEVEL[$level] ?? 40;
 
         return GameRound::create([

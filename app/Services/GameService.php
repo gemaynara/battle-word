@@ -39,10 +39,11 @@ class GameService
             ]);
 
             // Register host as first player
+            $hostNickname = $mode === 'vs_computer' ? 'Jogador' : 'Host';
             GamePlayer::create([
                 'game_id' => $game->id,
                 'user_id' => $hostUserId,
-                'nickname' => 'Host',
+                'nickname' => $hostNickname,
                 'is_host' => true,
                 'is_connected' => true,
                 'joined_at' => now(),

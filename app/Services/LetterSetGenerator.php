@@ -28,8 +28,9 @@ class LetterSetGenerator
      *
      * @param int $level Difficulty level (1=easy, 2=medium, 3=hard, 4=expert)
      * @param string|null $category Category filter (null = all categories)
+     * @param bool $shuffle Whether to shuffle the letters (false = show base word as-is)
      */
-    public function generate(int $level = 1, ?string $category = null): LetterSetResult
+    public function generate(int $level = 1, ?string $category = null, bool $shuffle = true): LetterSetResult
     {
         $lastResult = null;
         $config = $this->getDifficultyConfig($level);
@@ -53,10 +54,11 @@ class LetterSetGenerator
             $validWordCount = $this->countValidWords($letters);
 
             // Shuffle the letters so players don't see the base word directly
-            $shuffledLetters = $this->shuffleLetters($letters);
+            // Unless shuffle is disabled (for beginner levels)
+            $displayLetters = $shuffle ? $this->shuffleLetters($letters) : $letters;
 
             $lastResult = new LetterSetResult(
-                letters: $shuffledLetters,
+                letters: $displayLetters,
                 baseWord: $baseWord->word,
                 validWordCount: $validWordCount,
             );
