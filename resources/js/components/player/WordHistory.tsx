@@ -5,18 +5,19 @@ interface WordHistoryProps {
 }
 
 const rejectionReasons: Record<string, string> = {
-  time_expired: 'Tempo esgotado',
-  invalid_letters: 'Letras inválidas',
-  not_in_dictionary: 'Não está no dicionário',
-  duplicate: 'Palavra duplicada',
-  too_short: 'Palavra muito curta',
+  'Tempo esgotado': 'Tempo esgotado',
+  'Não pode usar a palavra-tema': 'É a palavra-tema!',
+  'Palavra não encontrada no dicionário': 'Não está no dicionário',
+  'Palavra já enviada': 'Já enviada',
+  'Palavra muito curta': 'Muito curta',
+  'Palavra pouco relacionada': 'Pouco relacionada',
 };
 
 const styles = {
   container: {
     flex: 1,
     overflowY: 'auto' as const,
-    padding: '8px 16px',
+    padding: '8px 12px',
   },
   empty: {
     textAlign: 'center' as const,
@@ -29,7 +30,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 12px',
-    borderRadius: '6px',
+    borderRadius: '8px',
     marginBottom: '6px',
     backgroundColor: '#1e293b',
   },
@@ -52,20 +53,25 @@ const styles = {
     color: '#f87171',
     fontSize: '16px',
   },
-  points: {
-    fontSize: '14px',
-    fontWeight: '600' as const,
-    color: '#4ade80',
-  },
-  reason: {
-    fontSize: '12px',
-    color: '#f87171',
-  },
   rightSection: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'flex-end',
     gap: '2px',
+  },
+  points: {
+    fontSize: '14px',
+    fontWeight: '700' as const,
+    color: '#4ade80',
+  },
+  pointsHigh: {
+    fontSize: '14px',
+    fontWeight: '700' as const,
+    color: '#fbbf24',
+  },
+  reason: {
+    fontSize: '12px',
+    color: '#f87171',
   },
 };
 
@@ -73,7 +79,9 @@ export default function WordHistory({ words }: WordHistoryProps) {
   if (words.length === 0) {
     return (
       <div style={styles.container}>
-        <p style={styles.empty}>Nenhuma palavra enviada ainda.</p>
+        <p style={styles.empty}>
+          Pense em palavras relacionadas ao tema!
+        </p>
       </div>
     );
   }
@@ -90,10 +98,12 @@ export default function WordHistory({ words }: WordHistoryProps) {
           </div>
           <div style={styles.rightSection}>
             {submission.is_valid ? (
-              <span style={styles.points}>+{submission.points}</span>
+              <span style={submission.points >= 50 ? styles.pointsHigh : styles.points}>
+                +{submission.points} pts
+              </span>
             ) : (
               <span style={styles.reason}>
-                {rejectionReasons[submission.rejection_reason ?? ''] || 'Inválida'}
+                {rejectionReasons[submission.rejection_reason ?? ''] || submission.rejection_reason || 'Inválida'}
               </span>
             )}
           </div>

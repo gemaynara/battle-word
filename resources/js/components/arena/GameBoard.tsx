@@ -12,7 +12,7 @@ interface GameBoardProps {
 export default function GameBoard({ letters, timeRemaining, scoreboard, recentWords, level }: GameBoardProps) {
   const isUrgent = timeRemaining <= 10;
 
-  // Track previous positions to detect rank changes (Req 9.2)
+  // Track previous positions to detect rank changes
   const prevPositionsRef = useRef<Map<string, number>>(new Map());
   const [highlightedPlayers, setHighlightedPlayers] = useState<Set<string>>(new Set());
 
@@ -29,12 +29,10 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
 
     if (newHighlights.size > 0) {
       setHighlightedPlayers(newHighlights);
-      // Clear highlights after animation duration
       const timer = setTimeout(() => setHighlightedPlayers(new Set()), 1500);
       return () => clearTimeout(timer);
     }
 
-    // Update stored positions
     const newPositions = new Map<string, number>();
     scoreboard.forEach((entry) => {
       newPositions.set(entry.nickname, entry.position);
@@ -42,7 +40,6 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
     prevPositionsRef.current = newPositions;
   }, [scoreboard]);
 
-  // Update positions after highlight state is set
   useEffect(() => {
     const newPositions = new Map<string, number>();
     scoreboard.forEach((entry) => {
@@ -51,12 +48,14 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
     prevPositionsRef.current = newPositions;
   }, [scoreboard]);
 
-  // Filter only valid words for arena display (Req 13.2)
   const validRecentWords = recentWords.filter((w) => w.is_valid).slice(0, 5);
+
+  // Theme word is stored in the "letters" field
+  const themeWord = letters;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-4">
-      {/* Top section: Timer + Level */}
+      {/* Top section: Timer + Theme Word */}
       <div className="mb-4 flex shrink-0 items-center justify-center gap-6">
         {level && (
           <div className="rounded-xl bg-indigo-500/20 px-5 py-2 text-center">
@@ -76,34 +75,24 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
         </div>
       </div>
 
-      {/* Middle section: Letters + Scoreboard (Req 13.5 - no scrolling) */}
+      {/* Middle section: Theme Word + Scoreboard */}
       <div className="flex min-h-0 flex-1 gap-6">
-        {/* Left: Letters display */}
+        {/* Left: Theme Word display */}
         <div className="flex flex-1 flex-col items-center justify-center">
-          <p className="mb-4 text-xl font-medium uppercase tracking-wider text-indigo-300">Letras Disponíveis</p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {letters.split('').map((letter, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-center rounded-xl border-2 border-indigo-400 font-bold text-white"
-                style={{
-                  width: '90px',
-                  height: '90px',
-                  fontSize: '72px',
-                  lineHeight: 1,
-                  // Req 13.1: Solid dark background ensures 7:1+ contrast for white text
-                  backgroundColor: '#1e1b4b',
-                }}
-              >
-                {letter}
-              </div>
-            ))}
+          <p className="mb-2 text-lg font-medium uppercase tracking-wider text-indigo-300">Palavra-Tema</p>
+          <div
+            className="rounded-2xl border-2 border-indigo-400 bg-indigo-950 px-12 py-8 text-center"
+          >
+            <span className="text-6xl font-bold text-white tracking-widest">{themeWord}</span>
           </div>
+          <p className="mt-4 text-base text-indigo-300">
+            Jogadores estão enviando palavras relacionadas...
+          </p>
         </div>
 
         {/* Right: Scoreboard + Recent Words */}
         <div className="flex w-96 shrink-0 flex-col gap-4 overflow-hidden">
-          {/* Live Scoreboard (Req 9.1, 9.2, 9.3) */}
+          {/* Live Scoreboard */}
           <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-white/10 backdrop-blur-sm p-5">
             <h3 className="mb-3 shrink-0 text-lg font-semibold text-indigo-300 uppercase tracking-wider">Placar</h3>
             <div className="min-h-0 flex-1 space-y-2 overflow-hidden">
@@ -132,7 +121,6 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
                       <span className="text-lg font-bold text-yellow-300">
                         {entry.score}
                       </span>
-                      {/* Req 9.3: Show dash if no last_word */}
                       <span className="ml-2 text-sm text-indigo-400 truncate max-w-[80px]">
                         {entry.last_word ?? '–'}
                       </span>
@@ -142,7 +130,7 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
             </div>
           </div>
 
-          {/* Recent Valid Words (Req 13.2) */}
+          {/* Recent Valid Words */}
           <div className="shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm p-5">
             <h3 className="mb-3 text-lg font-semibold text-indigo-300 uppercase tracking-wider">
               Últimas Palavras
@@ -163,7 +151,7 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
                       <span className="text-lg font-bold text-white">{submission.word}</span>
                     </div>
                     <span className="font-bold text-green-400">
-                      +{submission.points}
+                      +{submission.points} pts
                     </span>
                   </div>
                 ))

@@ -103,6 +103,31 @@ const styles = {
     borderRadius: '6px',
     color: '#f8fafc',
   },
+  themeSection: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: '4px',
+    padding: '12px 12px',
+    backgroundColor: '#1e293b',
+    flexShrink: 0,
+  },
+  themeLabel: {
+    fontSize: '10px',
+    color: '#64748b',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '1px',
+  },
+  themeWord: {
+    fontSize: '28px',
+    fontWeight: '800' as const,
+    color: '#a5b4fc',
+    letterSpacing: '2px',
+  },
+  themeHint: {
+    fontSize: '12px',
+    color: '#94a3b8',
+  },
   wordListArea: {
     flex: 1,
     overflowY: 'auto' as const,
@@ -254,6 +279,39 @@ export default function PlayerScreen() {
     }
   }, [state.status, playerToken]);
 
+  // Fallback: when timer reaches 0, poll game state to detect round end
+  useEffect(() => {
+    if (view !== 'playing' || timeRemaining > 0) return;
+
+    // Wait 2 seconds for the backend to process EndRoundJob, then poll
+    const timeout = setTimeout(async () => {
+      if (!code) return;
+      try {
+        const data = await gameApi.getGameState(code);
+        if (data.status === 'finished' || (data.current_round && data.current_round.status === 'finished')) {
+          dispatch({
+            type: 'ROUND_ENDED',
+            payload: {
+              round_number: data.current_round?.round_number ?? 1,
+              final_scores: data.players.map((p, i) => ({
+                nickname: p.nickname,
+                score: p.total_score ?? 0,
+                position: i + 1,
+                last_word: null,
+              })),
+              base_word: state.round?.letters ?? undefined,
+            },
+          });
+        }
+      } catch {
+        // If fetch fails, just force to finished state
+        setView('finished');
+      }
+    }, 2500);
+
+    return () => clearTimeout(timeout);
+  }, [view, timeRemaining, code, dispatch, state.round?.letters]);
+
   const handleJoined = useCallback((token: string, nick: string) => {
     setPlayerToken(token);
     setNickname(nick);
@@ -354,7 +412,7 @@ export default function PlayerScreen() {
   }
 
   // PLAYING VIEW
-  const letters = state.round?.letters || '';
+  const themeWord = state.round?.letters || '';
 
   return (
     <div style={styles.page}>
@@ -381,13 +439,11 @@ export default function PlayerScreen() {
         </div>
       </div>
 
-      {/* Available Letters */}
-      <div style={styles.letters}>
-        {letters.split('').map((letter, i) => (
-          <div key={`${letter}-${i}`} style={styles.letter}>
-            {letter}
-          </div>
-        ))}
+      {/* Theme Word */}
+      <div style={styles.themeSection}>
+        <span style={styles.themeLabel}>Palavra-tema</span>
+        <span style={styles.themeWord}>{themeWord}</span>
+        <span style={styles.themeHint}>Digite palavras relacionadas!</span>
       </div>
 
       {/* Word History (scrollable middle) */}

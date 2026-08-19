@@ -89,7 +89,7 @@ export default function HomePage() {
               Batalha de Palavras
             </h1>
             <p className="mt-2 text-base text-purple-200 sm:text-lg">
-              Forme o máximo de palavras com as letras disponíveis!
+              Descubra palavras relacionadas ao tema e ganhe pontos!
             </p>
           </div>
 

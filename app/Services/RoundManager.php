@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class RoundManager
 {
-    public function __construct(
-        private LetterSetGenerator $letterSetGenerator,
-    ) {}
+    public function __construct() {}
 
     /**
      * Duration per level in seconds.
@@ -28,10 +26,9 @@ class RoundManager
     ];
 
     /**
-     * Create a new round for the given game using LetterSetGenerator.
-     * Sets status to "waiting" and calculates the next round_number.
-     * Difficulty increases with each round (level = round_number, capped at 4).
-     * Letters are not shuffled until a player reaches 500+ total score.
+     * Create a new round for the given game.
+     * Selects a random theme word from the dictionary.
+     * The theme word is displayed to players who must submit related words.
      */
     public function createRound(Game $game): GameRound
     {
@@ -41,22 +38,63 @@ class RoundManager
         // Get category from game settings
         $category = $game->settings['category'] ?? null;
 
-        // Only shuffle letters if any player has reached 500+ points
-        $maxPlayerScore = $game->players()->max('total_score') ?? 0;
-        $shouldShuffle = $maxPlayerScore >= 500;
-
-        $letterSet = $this->letterSetGenerator->generate($level, $category, $shouldShuffle);
+        // Select a random theme word (5-8 chars, common words are better)
+        $themeWord = $this->selectThemeWord($category);
         $duration = self::DURATION_BY_LEVEL[$level] ?? 40;
 
         return GameRound::create([
             'game_id' => $game->id,
             'round_number' => $nextRoundNumber,
-            'letters' => $letterSet->letters,
-            'base_word' => $letterSet->baseWord,
+            'letters' => mb_strtoupper($themeWord), // Used as display in frontend
+            'base_word' => $themeWord,
             'duration_seconds' => $duration,
             'status' => 'waiting',
-            'total_valid_words' => $letterSet->validWordCount,
+            'total_valid_words' => 0,
         ]);
+    }
+
+    /**
+     * Select a random theme word from the dictionary.
+     * Prefers common, simple words (4-7 characters) that are easy to associate.
+     */
+    private function selectThemeWord(?string $category = null): string
+    {
+        // First try: words with a category (these are curated, common words)
+        $query = \App\Models\DictionaryWord::where('is_valid', true)
+            ->where('is_inappropriate', false)
+            ->where('length', '>=', 4)
+            ->where('length', '<=', 7)
+            ->whereNotNull('category');
+
+        if ($category && $category !== 'aleatorio') {
+            $query->where('category', $category);
+        }
+
+        $word = $query->inRandomOrder()->first();
+
+        if ($word) {
+            return $word->word;
+        }
+
+        // Fallback: use a hardcoded list of common, simple theme words
+        $commonWords = [
+            'CASA', 'CARRO', 'ESCOLA', 'PRAIA', 'COMIDA', 'FUTEBOL',
+            'MUSICA', 'FESTA', 'FAMILIA', 'CIDADE', 'CAMPO', 'LIVRO',
+            'CINEMA', 'VIAGEM', 'JARDIM', 'COZINHA', 'ANIMAL', 'ROUPA',
+            'INVERNO', 'VERAO', 'NOITE', 'FLORESTA', 'OCEANO', 'MONTANHA',
+            'HOSPITAL', 'MERCADO', 'IGREJA', 'PARQUE', 'FAZENDA', 'BANANA',
+            'CACHORRO', 'GATO', 'CAVALO', 'PASSARO', 'PEIXE', 'COBRA',
+            'LEAO', 'TIGRE', 'URSO', 'MACACO', 'ARROZ', 'FEIJAO',
+            'CARNE', 'FRANGO', 'SALADA', 'PIZZA', 'BOLO', 'SORVETE',
+            'CAFE', 'LEITE', 'MEDICO', 'PROFESSOR', 'POLICIAL', 'PILOTO',
+            'SOLDADO', 'PINTOR', 'CANTOR', 'PADEIRO', 'DENTISTA', 'JOGADOR',
+            'CHUVA', 'NEVE', 'VENTO', 'TROVAO', 'ESTRELA', 'NUVEM',
+            'RIO', 'LAGO', 'SERRA', 'VULCAO', 'DESERTO', 'SELVA',
+            'CADEIRA', 'MESA', 'PORTA', 'JANELA', 'ESPELHO', 'LAMPADA',
+            'RELOGIO', 'TELEFONE', 'SAPATO', 'CHAPEU', 'BOLSA', 'ANEL',
+        ];
+
+        return $commonWords[array_rand($commonWords)];
     }
 
     /**

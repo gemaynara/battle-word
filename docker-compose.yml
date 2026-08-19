@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: word-battle
+    ports:
+      - "8082:10000"
+    environment:
+      - APP_NAME=WordBattle
+      - APP_ENV=local
+      - APP_KEY=base64:se64sIgy+nMDvE4HbP93VLhAGG7m0yBItXKdQf76HFo=
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8082
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=word_battle
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+      - SESSION_DRIVER=database
+      - BROADCAST_CONNECTION=reverb
+      - QUEUE_CONNECTION=database
+      - CACHE_STORE=database
+      - REVERB_APP_ID=word-battle-local
+      - REVERB_APP_KEY=word-battle-key
+      - REVERB_APP_SECRET=word-battle-secret
+      - REVERB_HOST=localhost
+      - REVERB_PORT=8082
+      - REVERB_SCHEME=http
+      - REVERB_SERVER_HOST=0.0.0.0
+      - REVERB_SERVER_PORT=6001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=10000
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: word-battle-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_DATABASE=word_battle
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:

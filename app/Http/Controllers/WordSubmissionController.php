@@ -6,7 +6,7 @@ use App\Events\ScoreUpdated;
 use App\Events\WordSubmitted;
 use App\Models\Game;
 use App\Models\SubmittedWord;
-use App\Services\ScoringEngine;
+use App\Services\SemanticSimilarityService;
 use App\Services\WordValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,22 +15,23 @@ class WordSubmissionController extends Controller
 {
     public function __construct(
         private WordValidator $wordValidator,
-        private ScoringEngine $scoringEngine,
+        private SemanticSimilarityService $similarityService,
     ) {}
 
     /**
      * Submit a word for the current round.
+     * The word is scored based on semantic similarity to the theme word.
      * POST /api/games/{code}/submit-word
      */
     public function store(Request $request, string $code): JsonResponse
     {
         $request->validate([
-            'word' => 'required|string|max:15',
+            'word' => 'required|string|max:30',
         ]);
 
         $player = $request->attributes->get('game_player');
         $game = $player->game;
-        $word = strtoupper(trim($request->input('word')));
+        $word = mb_strtoupper(trim($request->input('word')));
 
         // Get current active round
         $round = $game->currentRound();
@@ -38,7 +39,7 @@ class WordSubmissionController extends Controller
         if (!$round) {
             return response()->json([
                 'error' => 'no_active_round',
-                'message' => 'No active round found.',
+                'message' => 'Nenhuma rodada ativa.',
             ], 422);
         }
 
@@ -46,7 +47,7 @@ class WordSubmissionController extends Controller
         $validationResult = $this->wordValidator->validate($round, $player, $word);
 
         if (!$validationResult->isValid) {
-            // Save invalid submission (resets combo)
+            // Save invalid submission
             SubmittedWord::create([
                 'game_round_id' => $round->id,
                 'game_player_id' => $player->id,
@@ -67,75 +68,97 @@ class WordSubmissionController extends Controller
                 'points' => 0,
                 'combo_multiplier' => 1,
                 'total_points' => 0,
+                'similarity' => 0,
                 'is_perfect_word' => false,
                 'is_long_word' => false,
                 'player_total_score' => $player->total_score,
-                'rejection_reason' => $validationResult->rejectionReason,
+                'rejection_reason' => $this->translateRejection($validationResult->rejectionReason),
             ]);
         }
 
-        // Get current combo for this player
-        $currentCombo = $this->scoringEngine->getComboForPlayer($round, $player);
+        // Calculate semantic similarity between submitted word and theme word
+        $themeWord = $round->base_word;
+        $similarity = $this->similarityService->calculateSimilarity($themeWord, $word);
+        $points = $this->similarityService->similarityToPoints($similarity);
 
-        // Calculate points
-        $scoreResult = $this->scoringEngine->calculatePoints($word, $round->letters, $currentCombo);
+        $isValid = $points > 0;
+        $rejectionReason = $isValid ? null : 'low_similarity';
 
-        // Save valid submission
+        // Save submission
         SubmittedWord::create([
             'game_round_id' => $round->id,
             'game_player_id' => $player->id,
             'word' => $word,
-            'is_valid' => true,
-            'rejection_reason' => null,
-            'points' => $scoreResult->points,
-            'combo_multiplier' => $scoreResult->comboMultiplier,
-            'total_points' => $scoreResult->totalPoints,
-            'is_perfect_word' => $scoreResult->isPerfectWord,
-            'is_long_word' => $scoreResult->isLongWord,
+            'is_valid' => $isValid,
+            'rejection_reason' => $rejectionReason,
+            'points' => $points,
+            'combo_multiplier' => 1,
+            'total_points' => $points,
+            'is_perfect_word' => $points >= 80,
+            'is_long_word' => false,
             'submitted_at' => now(),
         ]);
 
-        // Update player's total score atomically
-        $this->scoringEngine->updatePlayerScore($player, $scoreResult->totalPoints);
-        $player->refresh();
+        // Update player's total score if valid
+        if ($isValid) {
+            $player->increment('total_score', $points);
+            $player->refresh();
 
-        // Broadcast WordSubmitted event
-        event(new WordSubmitted(
-            game: $game,
-            playerNickname: $player->nickname,
-            word: $word,
-            points: $scoreResult->totalPoints,
-            isValid: true,
-        ));
+            // Broadcast WordSubmitted event
+            event(new WordSubmitted(
+                game: $game,
+                playerNickname: $player->nickname,
+                word: $word,
+                points: $points,
+                isValid: true,
+            ));
 
-        // Build scoreboard and broadcast ScoreUpdated
-        $scoreboard = $this->buildScoreboard($game);
-        event(new ScoreUpdated(
-            game: $game,
-            scoreboard: $scoreboard,
-        ));
+            // Build scoreboard and broadcast ScoreUpdated
+            $scoreboard = $this->buildScoreboard($game);
+            event(new ScoreUpdated(
+                game: $game,
+                scoreboard: $scoreboard,
+            ));
+        }
 
         return response()->json([
             'word' => $word,
-            'is_valid' => true,
-            'points' => $scoreResult->points,
-            'combo_multiplier' => $scoreResult->comboMultiplier,
-            'total_points' => $scoreResult->totalPoints,
-            'is_perfect_word' => $scoreResult->isPerfectWord,
-            'is_long_word' => $scoreResult->isLongWord,
+            'is_valid' => $isValid,
+            'points' => $points,
+            'combo_multiplier' => 1,
+            'total_points' => $points,
+            'similarity' => round($similarity * 100),
+            'is_perfect_word' => $points >= 80,
+            'is_long_word' => false,
             'player_total_score' => $player->total_score,
-            'rejection_reason' => null,
+            'rejection_reason' => $isValid ? null : 'Palavra pouco relacionada',
         ]);
     }
 
     /**
-     * Build a scoreboard array of all players sorted by score with their last valid word.
+     * Translate rejection reason to user-friendly message.
+     */
+    private function translateRejection(?string $reason): string
+    {
+        return match ($reason) {
+            'time_expired' => 'Tempo esgotado',
+            'not_connected' => 'Jogador desconectado',
+            'too_short' => 'Palavra muito curta',
+            'same_as_theme' => 'Não pode usar a palavra-tema',
+            'not_in_dictionary' => 'Palavra não encontrada no dicionário',
+            'duplicate' => 'Palavra já enviada',
+            'low_similarity' => 'Palavra pouco relacionada',
+            default => 'Palavra inválida',
+        };
+    }
+
+    /**
+     * Build scoreboard array.
      */
     private function buildScoreboard(Game $game): array
     {
         $players = $game->players()->orderByDesc('total_score')->get();
         $currentRound = $game->currentRound();
-
         $position = 1;
 
         return $players->map(function ($player) use ($currentRound, &$position) {

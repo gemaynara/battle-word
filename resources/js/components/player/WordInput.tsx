@@ -85,8 +85,8 @@ export default function WordInput({ onSubmit, disabled = false }: WordInputProps
         value={value}
         onChange={(e) => setValue(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
-        maxLength={15}
-        placeholder="Digite uma palavra..."
+        maxLength={30}
+        placeholder="Palavra relacionada..."
         disabled={disabled}
         autoComplete="off"
         autoCorrect="off"

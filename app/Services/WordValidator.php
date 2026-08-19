@@ -10,13 +10,13 @@ use App\Models\SubmittedWord;
 class WordValidator
 {
     /**
-     * Validate a word submission through the priority pipeline:
+     * Validate a word submission for the semantic similarity game:
      * 1. Time/round status
      * 2. Player participation
-     * 3. Min/max length
-     * 4. Letter availability
-     * 5. Dictionary lookup
-     * 6. Duplicate check
+     * 3. Min length (at least 2 chars)
+     * 4. Not the same as the theme word
+     * 5. Dictionary lookup (word must exist in pt-BR)
+     * 6. Duplicate check (same player, same round)
      */
     public function validate(GameRound $round, GamePlayer $player, string $word): ValidationResult
     {
@@ -29,17 +29,17 @@ class WordValidator
 
         // 2. Player participation check
         if (!$this->isPlayerConnected($player)) {
-            return ValidationResult::invalid('invalid_letters');
+            return ValidationResult::invalid('not_connected');
         }
 
-        // 3. Min/max length check
-        if (!$this->isValidLength($word, $round->letters)) {
-            return ValidationResult::invalid('invalid_letters');
+        // 3. Min length check
+        if (mb_strlen($word) < 2) {
+            return ValidationResult::invalid('too_short');
         }
 
-        // 4. Letter availability check
-        if (!$this->hasValidLetters($word, $round->letters)) {
-            return ValidationResult::invalid('invalid_letters');
+        // 4. Cannot submit the theme word itself
+        if ($word === mb_strtoupper($round->base_word)) {
+            return ValidationResult::invalid('same_as_theme');
         }
 
         // 5. Dictionary lookup
@@ -78,36 +78,7 @@ class WordValidator
     }
 
     /**
-     * Check that the word length is at least 2 and does not exceed the letter set length.
-     */
-    protected function isValidLength(string $word, string $letterSet): bool
-    {
-        $wordLength = mb_strlen($word);
-        $letterSetLength = mb_strlen($letterSet);
-
-        return $wordLength >= 2 && $wordLength <= $letterSetLength;
-    }
-
-    /**
-     * Check that each letter in the word is available in the letter set,
-     * respecting the exact quantity of each letter.
-     */
-    protected function hasValidLetters(string $word, string $letterSet): bool
-    {
-        $available = array_count_values(str_split(strtoupper($letterSet)));
-        $needed = array_count_values(str_split(strtoupper($word)));
-
-        foreach ($needed as $letter => $count) {
-            if (($available[$letter] ?? 0) < $count) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Check that the word exists in the dictionary with is_valid = true and is_inappropriate = false.
+     * Check that the word exists in the dictionary with is_valid = true.
      */
     protected function existsInDictionary(string $word): bool
     {

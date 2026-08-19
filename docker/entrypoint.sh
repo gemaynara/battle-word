@@ -2,17 +2,9 @@
 set -e
 
 PORT="${PORT:-10000}"
+export PORT
 
 echo "==> PORT=$PORT"
-
-# Garantir que só mpm_prefork está ativo
-rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*
-
-# Configurar Apache na porta correta (Railway injeta PORT)
-echo "Listen $PORT" > /etc/apache2/ports.conf
-sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
-
-echo "==> Apache will listen on port $PORT"
 
 # Gerar APP_KEY se não existir
 if [ -z "$APP_KEY" ]; then
@@ -21,17 +13,28 @@ if [ -z "$APP_KEY" ]; then
 fi
 
 # Cache config
-php /var/www/html/artisan config:cache
-php /var/www/html/artisan route:cache
-php /var/www/html/artisan view:cache
+php /var/www/html/artisan config:cache || true
+php /var/www/html/artisan route:cache || true
+php /var/www/html/artisan view:cache || true
 
 # Rodar migrations
 php /var/www/html/artisan migrate --force || true
 
-echo "==> Laravel setup complete"
+# Importar dicionário pt-BR (se tabela estiver vazia)
+WORD_COUNT=$(php /var/www/html/artisan tinker --execute="echo \App\Models\DictionaryWord::count();" 2>/dev/null | tail -1)
+if [ "$WORD_COUNT" = "0" ] || [ -z "$WORD_COUNT" ]; then
+    echo "==> Importing pt-BR dictionary..."
+    php /var/www/html/artisan dictionary:import database/data/lexico.txt --min-length=3 --max-length=12 || true
+    echo "==> Dictionary import complete"
+fi
+
+# Rodar seeder de achievements
+php /var/www/html/artisan db:seed --class=AchievementSeeder --force || true
+
+echo "==> Laravel setup complete, starting on port $PORT"
 
 # Rodar queue worker em background
 php /var/www/html/artisan queue:work --tries=3 --timeout=60 &
 
-# Iniciar supervisor (Apache + Reverb)
+# Iniciar supervisor (PHP server + Reverb)
 exec /usr/bin/supervisord -n

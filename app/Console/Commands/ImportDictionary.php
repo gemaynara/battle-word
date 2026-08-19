@@ -10,12 +10,15 @@ class ImportDictionary extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'dictionary:import {file : Path to word list file}';
+    protected $signature = 'dictionary:import
+        {file : Path to word list file}
+        {--min-length=2 : Minimum word length}
+        {--max-length=15 : Maximum word length}';
 
     /**
      * The console command description.
      */
-    protected $description = 'Import words from a text file into the dictionary_words table';
+    protected $description = 'Import words from a text file into the dictionary_words table (removes accents, filters by length)';
 
     /**
      * Execute the console command.
@@ -23,6 +26,8 @@ class ImportDictionary extends Command
     public function handle(): int
     {
         $filePath = $this->argument('file');
+        $minLength = (int) $this->option('min-length');
+        $maxLength = (int) $this->option('max-length');
 
         if (!file_exists($filePath)) {
             $this->error("File not found: {$filePath}");
@@ -30,6 +35,7 @@ class ImportDictionary extends Command
         }
 
         $this->info("Importing words from: {$filePath}");
+        $this->info("Filter: {$minLength}-{$maxLength} characters");
 
         $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
@@ -48,20 +54,34 @@ class ImportDictionary extends Command
         $skipped = 0;
         $chunk = [];
         $chunkSize = 500;
+        $seen = [];
 
         foreach ($lines as $line) {
-            $word = mb_strtoupper(trim($line));
+            $original = trim($line);
 
-            // Skip empty lines and words longer than 50 chars
-            if ($word === '' || mb_strlen($word) > 50) {
+            // Remove accents and convert to uppercase
+            $word = $this->normalizeWord($original);
+
+            $length = mb_strlen($word);
+
+            // Skip empty, too short, too long, or non-alpha words
+            if ($word === '' || $length < $minLength || $length > $maxLength || !$this->isAlphaOnly($word)) {
                 $skipped++;
                 $bar->advance();
                 continue;
             }
 
+            // Skip duplicates within this import (same normalized form)
+            if (isset($seen[$word])) {
+                $skipped++;
+                $bar->advance();
+                continue;
+            }
+            $seen[$word] = true;
+
             $chunk[] = [
                 'word' => $word,
-                'length' => mb_strlen($word),
+                'length' => $length,
                 'is_valid' => true,
                 'is_inappropriate' => false,
                 'created_at' => now(),
@@ -89,7 +109,50 @@ class ImportDictionary extends Command
         $this->info("Import complete!");
         $this->info("  Imported/Updated: {$imported}");
         $this->info("  Skipped: {$skipped}");
+        $this->info("  Duplicates removed: " . ($totalLines - $imported - $skipped));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Normalize a word: remove accents and convert to uppercase.
+     */
+    private function normalizeWord(string $word): string
+    {
+        // Transliterate accented characters to ASCII equivalents
+        $word = $this->removeAccents($word);
+
+        return mb_strtoupper($word);
+    }
+
+    /**
+     * Remove accents/diacritics from a string.
+     */
+    private function removeAccents(string $str): string
+    {
+        $map = [
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ç' => 'c', 'ñ' => 'n',
+            'Á' => 'A', 'À' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A',
+            'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+            'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I',
+            'Ó' => 'O', 'Ò' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O',
+            'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U',
+            'Ç' => 'C', 'Ñ' => 'N',
+        ];
+
+        return strtr($str, $map);
+    }
+
+    /**
+     * Check if a string contains only A-Z characters.
+     */
+    private function isAlphaOnly(string $word): bool
+    {
+        return preg_match('/^[A-Z]+$/', $word) === 1;
     }
 }
