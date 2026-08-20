@@ -109,10 +109,16 @@ class WordSubmissionController extends Controller
 
             // Record weekly ranking
             if (!$player->is_bot) {
+                $validWordsCount = \App\Models\SubmittedWord::where('game_round_id', $round->id)
+                    ->where('game_player_id', $player->id)
+                    ->where('is_valid', true)
+                    ->count();
+
                 \App\Models\WeeklyRanking::recordScore(
                     $player->nickname,
                     $player->total_score,
-                    $game->code
+                    $game->code,
+                    $validWordsCount
                 );
             }
 

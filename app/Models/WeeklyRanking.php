@@ -10,13 +10,14 @@ class WeeklyRanking extends Model
         'nickname',
         'week_key',
         'best_score',
+        'best_words_count',
         'game_code',
     ];
 
     /**
      * Record a player's score if it beats their current weekly best.
      */
-    public static function recordScore(string $nickname, int $score, string $gameCode): void
+    public static function recordScore(string $nickname, int $score, string $gameCode, int $wordsCount = 0): void
     {
         if ($score <= 0) {
             return;
@@ -26,11 +27,11 @@ class WeeklyRanking extends Model
 
         $entry = static::firstOrCreate(
             ['nickname' => $nickname, 'week_key' => $weekKey],
-            ['best_score' => $score, 'game_code' => $gameCode]
+            ['best_score' => $score, 'best_words_count' => $wordsCount, 'game_code' => $gameCode]
         );
 
         if ($score > $entry->best_score) {
-            $entry->update(['best_score' => $score, 'game_code' => $gameCode]);
+            $entry->update(['best_score' => $score, 'best_words_count' => $wordsCount, 'game_code' => $gameCode]);
         }
     }
 
@@ -49,6 +50,7 @@ class WeeklyRanking extends Model
                 'position' => $index + 1,
                 'nickname' => $entry->nickname,
                 'best_score' => $entry->best_score,
+                'words_count' => $entry->best_words_count,
             ])
             ->toArray();
     }

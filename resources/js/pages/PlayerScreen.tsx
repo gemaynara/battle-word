@@ -17,6 +17,7 @@ const styles = {
   page: {
     display: 'flex',
     flexDirection: 'column' as const,
+    height: '100%',
     height: '100dvh',
     backgroundColor: '#0f172a',
     color: '#f8fafc',
@@ -24,7 +25,11 @@ const styles = {
     maxWidth: '428px',
     margin: '0 auto',
     overflow: 'hidden' as const,
-    position: 'relative' as const,
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     display: 'flex',
@@ -127,8 +132,9 @@ const styles = {
     flexDirection: 'column' as const,
     alignItems: 'center',
     gap: '2px',
-    padding: '10px 12px',
+    padding: '8px 12px',
     backgroundColor: '#1e293b',
+    borderBottom: '1px solid #334155',
     flexShrink: 0,
   },
   themeLabel: {
@@ -138,7 +144,7 @@ const styles = {
     letterSpacing: '1px',
   },
   themeWord: {
-    fontSize: 'clamp(22px, 6vw, 30px)',
+    fontSize: 'clamp(20px, 5vw, 26px)',
     fontWeight: '800' as const,
     color: '#a5b4fc',
     letterSpacing: '2px',
@@ -147,7 +153,7 @@ const styles = {
   },
   themeHint: {
     fontSize: '11px',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   wordListArea: {
     flex: 1,
@@ -273,6 +279,17 @@ export default function PlayerScreen() {
           max_players: data.max_players,
           qr_url: data.qr_url,
         };
+
+        // If solo game is finished or has no active round, redirect to home
+        const isSolo = data.mode === 'vs_computer';
+        const roundFinished = data.current_round?.status === 'finished' || !data.current_round;
+        const gameFinished = data.status === 'finished';
+
+        if (isSolo && (gameFinished || roundFinished)) {
+          window.location.href = '/';
+          return;
+        }
+
         dispatch({
           type: 'SET_GAME_STATE',
           payload: {
@@ -435,24 +452,31 @@ export default function PlayerScreen() {
         )}
 
         {hasPoints && (
-          <div style={styles.statsGrid}>
-            <div style={styles.statCard}>
-              <div style={styles.statValue}>{validWords.length}</div>
-              <div style={styles.statLabel}>Palavras aceitas</div>
+          <>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px' }}>
+              Tempo sobrevivido: {30 + (validWords.length * 5)}s
+            </p>
+            <div style={styles.statsGrid}>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{validWords.length}</div>
+                <div style={styles.statLabel}>Palavras aceitas</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{bestWord.word || '—'}</div>
+                <div style={styles.statLabel}>Melhor palavra</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{bestWord.points}</div>
+                <div style={styles.statLabel}>Maior pontuação</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>
+                  {validWords.length > 0 ? Math.round(state.myScore / validWords.length) : 0}
+                </div>
+                <div style={styles.statLabel}>Média por palavra</div>
+              </div>
             </div>
-            <div style={styles.statCard}>
-              <div style={styles.statValue}>{bestWord.word || '—'}</div>
-              <div style={styles.statLabel}>Melhor palavra</div>
-            </div>
-            <div style={styles.statCard}>
-              <div style={styles.statValue}>{bestWord.points || 0}</div>
-              <div style={styles.statLabel}>Maior pontuação</div>
-            </div>
-            <div style={styles.statCard}>
-              <div style={styles.statValue}>{state.myWords.length}</div>
-              <div style={styles.statLabel}>Total enviadas</div>
-            </div>
-          </div>
+          </>
         )}
 
         <button
@@ -496,23 +520,36 @@ export default function PlayerScreen() {
         </button>
       </div>
 
-      {/* Theme Word */}
+      {/* Theme Word - compact */}
       <div style={styles.themeSection}>
-        <span style={styles.themeLabel}>Palavra-tema</span>
         <span style={styles.themeWord}>{themeWord}</span>
-        <span style={styles.themeHint}>Acertos dão +5s de tempo!</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {state.myCombo > 1 && (
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '700',
+              color: '#fbbf24',
+              backgroundColor: 'rgba(251, 191, 36, 0.15)',
+              padding: '2px 8px',
+              borderRadius: '10px',
+            }}>
+              {state.myCombo}x seguidas
+            </span>
+          )}
+          <span style={styles.themeHint}>+5s por acerto</span>
+        </div>
       </div>
 
-      {/* Word History (scrollable middle) */}
-      <div style={styles.wordListArea}>
-        <WordHistory words={state.myWords} />
-      </div>
-
-      {/* Word Input (sticky bottom) */}
+      {/* Word Input - right below theme for visibility with keyboard */}
       <WordInput
         onSubmit={handleSubmitWord}
         disabled={timeRemaining <= 0}
       />
+
+      {/* Word History (scrollable, takes remaining space) */}
+      <div style={styles.wordListArea}>
+        <WordHistory words={state.myWords} />
+      </div>
 
       {/* Floating points animation */}
       <FloatingPoints trigger={floatTrigger} />

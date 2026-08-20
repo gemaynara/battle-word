@@ -11,9 +11,8 @@ const styles = {
     flexDirection: 'row' as const,
     gap: '8px',
     padding: '8px 12px',
-    paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
     backgroundColor: '#1e293b',
-    borderTop: '1px solid #334155',
+    borderBottom: '1px solid #334155',
     flexShrink: 0,
   },
   input: {

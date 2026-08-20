@@ -10,7 +10,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('aleatorio');
   const [view, setView] = useState<'main' | 'friends'>('main');
-  const [ranking, setRanking] = useState<Array<{ position: number; nickname: string; best_score: number }>>([]);
+  const [ranking, setRanking] = useState<Array<{ position: number; nickname: string; best_score: number; words_count: number }>>([]);
   const [nickname, setNickname] = useState(() => localStorage.getItem('player_nickname') || '');
 
   // Fetch weekly ranking on mount
@@ -214,7 +214,10 @@ export default function HomePage() {
                     <span className="flex-1 text-sm font-medium text-white truncate">
                       {entry.nickname}
                     </span>
-                    <span className="text-sm font-bold text-yellow-300">
+                    <span className="text-xs text-purple-300">
+                      {entry.words_count} palavras
+                    </span>
+                    <span className="text-sm font-bold text-yellow-300 ml-1">
                       {entry.best_score} pts
                     </span>
                   </div>
