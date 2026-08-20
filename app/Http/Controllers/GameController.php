@@ -20,14 +20,16 @@ class GameController extends Controller
     {
         $request->validate([
             'mode' => 'sometimes|string|in:arena,vs_computer',
-            'category' => 'sometimes|string|in:substantivos,cidades,filmes,animais,comidas,profissoes,esportes,natureza,aleatorio',
+            'category' => 'sometimes|string|in:substantivos,cidades,filmes,animais,comidas,profissoes,esportes,natureza,alimentos,corpo,objetos,verbos,adjetivos,aleatorio',
+            'nickname' => 'sometimes|string|min:2|max:20',
         ]);
 
         $mode = $request->input('mode', 'arena');
         $category = $request->input('category', 'aleatorio');
+        $nickname = $request->input('nickname', 'Jogador');
         $hostUserId = $request->user()?->id;
 
-        $game = $this->gameService->createGame($mode, $hostUserId, $category);
+        $game = $this->gameService->createGame($mode, $hostUserId, $category, $nickname);
 
         // Get the host player token
         $hostPlayer = $game->players->firstWhere('is_host', true);

@@ -80,7 +80,7 @@ export default function WordHistory({ words }: WordHistoryProps) {
     return (
       <div style={styles.container}>
         <p style={styles.empty}>
-          Pense em palavras relacionadas ao tema!
+          Digite palavras relacionadas ao tema acima!
         </p>
       </div>
     );

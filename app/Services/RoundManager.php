@@ -16,13 +16,13 @@ class RoundManager
 
     /**
      * Duration per level in seconds.
-     * Level 1 (easy): 60s, Level 2: 50s, Level 3: 45s, Level 4+: 40s
+     * Starting at 30s for all levels (time is extended by correct answers).
      */
     private const DURATION_BY_LEVEL = [
-        1 => 60,
-        2 => 50,
-        3 => 45,
-        4 => 40,
+        1 => 30,
+        2 => 30,
+        3 => 30,
+        4 => 30,
     ];
 
     /**
@@ -259,6 +259,19 @@ class RoundManager
                 'best_combo' => $score->best_combo,
             ];
         })->toArray();
+
+        // Record weekly ranking for each player
+        $game = $round->game;
+        foreach ($gameScores as $score) {
+            $player = GamePlayer::find($score->game_player_id);
+            if ($player && !$player->is_bot) {
+                \App\Models\WeeklyRanking::recordScore(
+                    $player->nickname,
+                    $score->round_score,
+                    $game->code
+                );
+            }
+        }
 
         $highlights = [];
         $topScore = $gameScores->first();

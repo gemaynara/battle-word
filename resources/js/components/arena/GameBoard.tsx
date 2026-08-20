@@ -86,7 +86,7 @@ export default function GameBoard({ letters, timeRemaining, scoreboard, recentWo
             <span className="text-6xl font-bold text-white tracking-widest">{themeWord}</span>
           </div>
           <p className="mt-4 text-base text-indigo-300">
-            Jogadores estão enviando palavras relacionadas...
+            Acertos dão +5s · Quanto mais relacionada, mais pontos!
           </p>
         </div>
 

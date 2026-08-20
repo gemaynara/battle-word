@@ -15,7 +15,7 @@ class CategorizedDictionarySeeder extends Seeder
         foreach ($categories as $category => $words) {
             foreach ($words as $word) {
                 $normalized = mb_strtoupper(trim($word));
-                DictionaryWord::firstOrCreate(
+                DictionaryWord::updateOrCreate(
                     ['word' => $normalized],
                     [
                         'length' => mb_strlen($normalized),

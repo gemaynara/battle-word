@@ -104,6 +104,18 @@ class WordSubmissionController extends Controller
             $player->increment('total_score', $points);
             $player->refresh();
 
+            // Add 5 seconds to the round duration
+            $round->increment('duration_seconds', 5);
+
+            // Record weekly ranking
+            if (!$player->is_bot) {
+                \App\Models\WeeklyRanking::recordScore(
+                    $player->nickname,
+                    $player->total_score,
+                    $game->code
+                );
+            }
+
             // Broadcast WordSubmitted event
             event(new WordSubmitted(
                 game: $game,
@@ -132,6 +144,7 @@ class WordSubmissionController extends Controller
             'is_long_word' => false,
             'player_total_score' => $player->total_score,
             'rejection_reason' => $isValid ? null : 'Palavra pouco relacionada',
+            'time_bonus' => $isValid ? 5 : 0,
         ]);
     }
 

@@ -12,7 +12,7 @@ const styles = {
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh',
+    minHeight: '100dvh',
     padding: '24px 16px',
     backgroundColor: '#0f172a',
     color: '#f8fafc',

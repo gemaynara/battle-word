@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 
@@ -10,28 +10,48 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('aleatorio');
   const [view, setView] = useState<'main' | 'friends'>('main');
+  const [ranking, setRanking] = useState<Array<{ position: number; nickname: string; best_score: number }>>([]);
+  const [nickname, setNickname] = useState(() => localStorage.getItem('player_nickname') || '');
+
+  // Fetch weekly ranking on mount
+  useEffect(() => {
+    gameApi.getWeeklyRanking()
+      .then((data) => setRanking(data.ranking))
+      .catch(() => {});
+  }, []);
 
   const categories = [
-    { value: 'aleatorio', label: '🎲 Aleatório' },
-    { value: 'animais', label: '🐾 Animais' },
-    { value: 'alimentos', label: '🍎 Alimentos' },
-    { value: 'natureza', label: '🌿 Natureza' },
-    { value: 'profissoes', label: '👷 Profissões' },
-    { value: 'objetos', label: '🔧 Objetos' },
+    { value: 'aleatorio', label: 'Aleatório' },
+    { value: 'animais', label: 'Animais' },
+    { value: 'alimentos', label: 'Alimentos' },
+    { value: 'natureza', label: 'Natureza' },
+    { value: 'profissoes', label: 'Profissões' },
+    { value: 'objetos', label: 'Objetos' },
   ];
 
-  // Solo mode: create game, auto-join as player, start round, go to player screen
+  const validateNickname = (): boolean => {
+    if (nickname.trim().length < 2) {
+      setError('Digite um apelido com pelo menos 2 caracteres.');
+      return false;
+    }
+    // Save nickname for future visits
+    localStorage.setItem('player_nickname', nickname.trim());
+    return true;
+  };
+
+  // Solo mode: create game with nickname, start round, go to player screen
   const handlePlaySolo = async () => {
+    if (!validateNickname()) return;
     setError('');
     setIsLoading(true);
     try {
-      const response = await gameApi.createGame('vs_computer', selectedCategory);
+      const response = await gameApi.createGame('vs_computer', selectedCategory, nickname.trim());
       const code = response.code;
       const token = response.player_token;
 
-      // Store token
+      // Store token and nickname
       localStorage.setItem(`player_token_${code}`, token);
-      localStorage.setItem(`player_nickname_${code}`, 'Jogador');
+      localStorage.setItem(`player_nickname_${code}`, nickname.trim());
 
       // Start the round immediately
       await gameApi.startRound(code, token);
@@ -48,11 +68,13 @@ export default function HomePage() {
 
   // Friends mode: create game and go to arena (waiting room with QR)
   const handleCreateFriendsGame = async () => {
+    if (!validateNickname()) return;
     setError('');
     setIsLoading(true);
     try {
-      const response = await gameApi.createGame('arena', selectedCategory);
+      const response = await gameApi.createGame('arena', selectedCategory, nickname.trim());
       localStorage.setItem(`player_token_${response.code}`, response.player_token);
+      localStorage.setItem(`player_nickname_${response.code}`, nickname.trim());
       navigate(`/arena/${response.code}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao criar jogo. Tente novamente.';
@@ -81,15 +103,15 @@ export default function HomePage() {
   // Main view: choose solo or friends
   if (view === 'main') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 px-4">
-        <div className="w-full max-w-md space-y-6 text-center">
+      <div className="min-h-screen overflow-y-auto bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 px-4 py-8">
+        <div className="mx-auto w-full max-w-md space-y-5 text-center">
           {/* Title */}
           <div>
             <h1 className="text-4xl font-bold text-white tracking-tight sm:text-5xl">
               Batalha de Palavras
             </h1>
             <p className="mt-2 text-base text-purple-200 sm:text-lg">
-              Descubra palavras relacionadas ao tema e ganhe pontos!
+              Pense rápido! Encontre palavras relacionadas ao tema.
             </p>
           </div>
 
@@ -113,6 +135,19 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Nickname Input */}
+          <div className="rounded-2xl bg-white/10 backdrop-blur-sm p-4 space-y-2">
+            <label className="block text-sm font-medium text-purple-200">Seu apelido</label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => { setNickname(e.target.value); setError(''); }}
+              placeholder="Como quer ser chamado?"
+              maxLength={20}
+              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-center text-lg font-bold text-white placeholder:text-white/40 placeholder:text-sm placeholder:font-normal focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+            />
+          </div>
+
           {/* Play Options */}
           <div className="space-y-3">
             <button
@@ -120,7 +155,7 @@ export default function HomePage() {
               disabled={isLoading}
               className="w-full rounded-2xl bg-indigo-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Preparando...' : '🎯 Jogar Sozinho'}
+              {isLoading ? 'Preparando...' : 'Jogar Sozinho'}
             </button>
 
             <button
@@ -128,7 +163,7 @@ export default function HomePage() {
               disabled={isLoading}
               className="w-full rounded-2xl bg-pink-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-pink-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              👥 Jogar com Amigos
+              Jogar com Amigos
             </button>
           </div>
 
@@ -155,6 +190,38 @@ export default function HomePage() {
             </form>
             {joinError && <p className="text-sm text-red-300">{joinError}</p>}
           </div>
+
+          {/* Weekly Ranking */}
+          {ranking.length > 0 && (
+            <div className="rounded-2xl bg-white/10 backdrop-blur-sm p-4 space-y-3">
+              <h2 className="text-base font-semibold text-white">Ranking Semanal</h2>
+              <div className="space-y-1.5">
+                {ranking.map((entry) => (
+                  <div
+                    key={entry.position}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                      entry.position <= 3 ? 'bg-yellow-500/10' : 'bg-white/5'
+                    }`}
+                  >
+                    <span className={`w-6 text-center text-sm font-bold ${
+                      entry.position === 1 ? 'text-yellow-300' :
+                      entry.position === 2 ? 'text-gray-300' :
+                      entry.position === 3 ? 'text-amber-600' :
+                      'text-indigo-300'
+                    }`}>
+                      {entry.position}º
+                    </span>
+                    <span className="flex-1 text-sm font-medium text-white truncate">
+                      {entry.nickname}
+                    </span>
+                    <span className="text-sm font-bold text-yellow-300">
+                      {entry.best_score} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -162,8 +229,8 @@ export default function HomePage() {
 
   // Friends view: create game or go back
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 px-4">
-      <div className="w-full max-w-md space-y-6 text-center">
+    <div className="min-h-screen overflow-y-auto bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 px-4 py-8">
+      <div className="mx-auto w-full max-w-md space-y-6 text-center">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight sm:text-4xl">
             Jogar com Amigos
@@ -198,7 +265,7 @@ export default function HomePage() {
           disabled={isLoading}
           className="w-full rounded-2xl bg-indigo-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Criando sala...' : '🎮 Criar Sala'}
+          {isLoading ? 'Criando sala...' : 'Criar Sala'}
         </button>
 
         {error && <p className="text-sm text-red-300">{error}</p>}

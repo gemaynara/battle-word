@@ -9,24 +9,28 @@ import JoinForm from '../components/player/JoinForm';
 import WaitingView from '../components/player/WaitingView';
 import WordInput from '../components/player/WordInput';
 import WordHistory from '../components/player/WordHistory';
+import FloatingPoints from '../components/player/FloatingPoints';
+import Confetti from '../components/player/Confetti';
+import { playCorrectSound, playWrongSound, playHighScoreSound, playFinishSound, playFailSound } from '../hooks/useSounds';
 
 const styles = {
   page: {
     display: 'flex',
     flexDirection: 'column' as const,
-    height: '100vh',
     height: '100dvh',
     backgroundColor: '#0f172a',
     color: '#f8fafc',
+    width: '100%',
     maxWidth: '428px',
     margin: '0 auto',
     overflow: 'hidden' as const,
+    position: 'relative' as const,
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '8px 12px',
+    padding: '10px 16px',
     backgroundColor: '#1e293b',
     borderBottom: '1px solid #334155',
     flexShrink: 0,
@@ -43,7 +47,7 @@ const styles = {
     letterSpacing: '0.5px',
   },
   scoreValue: {
-    fontSize: '20px',
+    fontSize: '22px',
     fontWeight: '700' as const,
     color: '#6366f1',
   },
@@ -59,7 +63,7 @@ const styles = {
     letterSpacing: '0.5px',
   },
   timerValue: {
-    fontSize: '20px',
+    fontSize: '22px',
     fontWeight: '700' as const,
     color: '#f8fafc',
   },
@@ -81,6 +85,21 @@ const styles = {
     fontSize: '20px',
     fontWeight: '700' as const,
     color: '#fbbf24',
+  },
+  abandonButton: {
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '16px',
+    fontWeight: '700' as const,
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
   letters: {
     display: 'flex',
@@ -107,8 +126,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    gap: '4px',
-    padding: '12px 12px',
+    gap: '2px',
+    padding: '10px 12px',
     backgroundColor: '#1e293b',
     flexShrink: 0,
   },
@@ -119,13 +138,15 @@ const styles = {
     letterSpacing: '1px',
   },
   themeWord: {
-    fontSize: '28px',
+    fontSize: 'clamp(22px, 6vw, 30px)',
     fontWeight: '800' as const,
     color: '#a5b4fc',
     letterSpacing: '2px',
+    wordBreak: 'break-all' as const,
+    textAlign: 'center' as const,
   },
   themeHint: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#94a3b8',
   },
   wordListArea: {
@@ -140,53 +161,56 @@ const styles = {
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh',
+    minHeight: '100dvh',
     padding: '24px 16px',
     backgroundColor: '#0f172a',
     color: '#f8fafc',
     textAlign: 'center' as const,
+    width: '100%',
     maxWidth: '428px',
     margin: '0 auto',
     boxSizing: 'border-box' as const,
   },
   endTitle: {
-    fontSize: '28px',
+    fontSize: 'clamp(22px, 6vw, 28px)',
     fontWeight: '700' as const,
     marginBottom: '8px',
   },
   endScore: {
-    fontSize: '48px',
+    fontSize: 'clamp(36px, 10vw, 48px)',
     fontWeight: '700' as const,
     color: '#6366f1',
     marginBottom: '8px',
   },
   endPosition: {
-    fontSize: '18px',
+    fontSize: '16px',
     color: '#94a3b8',
-    marginBottom: '32px',
+    marginBottom: '24px',
   },
   statsGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
+    gap: '12px',
     width: '100%',
     maxWidth: '300px',
-    marginBottom: '32px',
+    marginBottom: '24px',
   },
   statCard: {
     backgroundColor: '#1e293b',
     borderRadius: '8px',
-    padding: '16px 12px',
+    padding: '12px 8px',
     textAlign: 'center' as const,
+    overflow: 'hidden' as const,
   },
   statValue: {
-    fontSize: '24px',
+    fontSize: 'clamp(16px, 4vw, 22px)',
     fontWeight: '700' as const,
     color: '#f8fafc',
-    marginBottom: '4px',
+    marginBottom: '2px',
+    wordBreak: 'break-all' as const,
   },
   statLabel: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#64748b',
   },
   homeButton: {
@@ -199,15 +223,18 @@ const styles = {
     color: '#ffffff',
     cursor: 'pointer',
     minHeight: '48px',
+    width: '100%',
+    maxWidth: '280px',
   },
   loadingContainer: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh',
+    minHeight: '100dvh',
     backgroundColor: '#0f172a',
     color: '#94a3b8',
     fontSize: '16px',
+    width: '100%',
     maxWidth: '428px',
     margin: '0 auto',
   },
@@ -219,6 +246,8 @@ export default function PlayerScreen() {
   const [playerToken, setPlayerToken] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string | null>(null);
   const [view, setView] = useState<'loading' | 'join' | 'waiting' | 'playing' | 'finished'>('loading');
+  const [floatTrigger, setFloatTrigger] = useState<{ points: number; id: number } | null>(null);
+  const floatIdRef = { current: 0 };
 
   useWebSocket(code, dispatch);
 
@@ -283,34 +312,19 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (view !== 'playing' || timeRemaining > 0) return;
 
-    // Wait 2 seconds for the backend to process EndRoundJob, then poll
-    const timeout = setTimeout(async () => {
-      if (!code) return;
-      try {
-        const data = await gameApi.getGameState(code);
-        if (data.status === 'finished' || (data.current_round && data.current_round.status === 'finished')) {
-          dispatch({
-            type: 'ROUND_ENDED',
-            payload: {
-              round_number: data.current_round?.round_number ?? 1,
-              final_scores: data.players.map((p, i) => ({
-                nickname: p.nickname,
-                score: p.total_score ?? 0,
-                position: i + 1,
-                last_word: null,
-              })),
-              base_word: state.round?.letters ?? undefined,
-            },
-          });
-        }
-      } catch {
-        // If fetch fails, just force to finished state
-        setView('finished');
+    // Wait 2 seconds for the backend to process EndRoundJob, then transition
+    const timeout = setTimeout(() => {
+      // Play end sound based on score
+      if (state.myScore > 0) {
+        playFinishSound();
+      } else {
+        playFailSound();
       }
-    }, 2500);
+      setView('finished');
+    }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [view, timeRemaining, code, dispatch, state.round?.letters]);
+  }, [view, timeRemaining, state.myScore]);
 
   const handleJoined = useCallback((token: string, nick: string) => {
     setPlayerToken(token);
@@ -329,6 +343,25 @@ export default function PlayerScreen() {
         rejection_reason: result.rejection_reason,
       };
       dispatch({ type: 'SET_MY_WORD', payload: submission });
+
+      // Add time bonus for valid words
+      if (result.is_valid && result.time_bonus) {
+        dispatch({ type: 'ADD_TIME_BONUS', payload: result.time_bonus });
+      }
+
+      // Trigger floating points animation
+      if (result.is_valid && result.total_points > 0) {
+        floatIdRef.current += 1;
+        setFloatTrigger({ points: result.total_points, id: floatIdRef.current });
+        // Play sound
+        if (result.total_points >= 50) {
+          playHighScoreSound();
+        } else {
+          playCorrectSound();
+        }
+      } else if (!result.is_valid) {
+        playWrongSound();
+      }
     } catch (err) {
       // If submission fails (rate limit, etc.), show as rejected
       const submission: WordSubmission = {
@@ -338,6 +371,7 @@ export default function PlayerScreen() {
         rejection_reason: 'Erro ao enviar',
       };
       dispatch({ type: 'SET_MY_WORD', payload: submission });
+      playWrongSound();
     }
   }, [code, playerToken, dispatch]);
 
@@ -363,49 +397,69 @@ export default function PlayerScreen() {
   // END STATE VIEW
   if (view === 'finished') {
     const validWords = state.myWords.filter((w) => w.is_valid);
-    const longestWord = validWords.reduce(
-      (longest, w) => (w.word.length > longest.length ? w.word : longest),
-      ''
+    const bestWord = validWords.reduce(
+      (best, w) => (w.points > best.points ? w : best),
+      { word: '', points: 0 } as { word: string; points: number }
     );
-    // Use the position field from scoreboard entry if available, else fallback to index
-    const myEntry = state.scoreboard.find((entry) => entry.nickname === nickname);
-    const myPosition = myEntry?.position ?? (
-      state.scoreboard.findIndex((entry) => entry.nickname === nickname) + 1
-    );
+    const themeWordDisplay = state.baseWord || state.round?.letters || '';
+    const hasPoints = state.myScore > 0;
 
     return (
       <div style={styles.endContainer}>
-        <h1 style={styles.endTitle}>Rodada Finalizada!</h1>
-        {state.baseWord && (
+        {hasPoints && <Confetti />}
+
+        <h1 style={styles.endTitle}>
+          {hasPoints ? 'Parabéns!' : 'Tempo esgotado!'}
+        </h1>
+
+        {!hasPoints && (
+          <p style={{ fontSize: '48px', marginBottom: '8px' }}>😅</p>
+        )}
+
+        {themeWordDisplay && (
           <p style={{
             fontSize: '14px',
             color: '#a5b4fc',
             marginBottom: '12px',
           }}>
-            A palavra era: <strong style={{ fontSize: '18px', color: '#f8fafc', letterSpacing: '2px' }}>{state.baseWord}</strong>
+            Palavra-tema: <strong style={{ fontSize: '18px', color: '#f8fafc', letterSpacing: '2px' }}>{themeWordDisplay}</strong>
           </p>
         )}
-        <p style={styles.endScore}>{state.myScore}</p>
-        {myPosition > 0 && (
-          <p style={styles.endPosition}>
-            Você ficou em {myPosition}º lugar
+
+        <p style={styles.endScore}>{state.myScore} pts</p>
+
+        {!hasPoints && (
+          <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '16px' }}>
+            Nenhuma palavra pontuou dessa vez. Tente novamente!
           </p>
         )}
-        <div style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{validWords.length}</div>
-            <div style={styles.statLabel}>Palavras válidas</div>
+
+        {hasPoints && (
+          <div style={styles.statsGrid}>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>{validWords.length}</div>
+              <div style={styles.statLabel}>Palavras aceitas</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>{bestWord.word || '—'}</div>
+              <div style={styles.statLabel}>Melhor palavra</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>{bestWord.points || 0}</div>
+              <div style={styles.statLabel}>Maior pontuação</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>{state.myWords.length}</div>
+              <div style={styles.statLabel}>Total enviadas</div>
+            </div>
           </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{longestWord || '—'}</div>
-            <div style={styles.statLabel}>Maior palavra</div>
-          </div>
-        </div>
+        )}
+
         <button
           style={styles.homeButton}
           onClick={() => window.location.href = '/'}
         >
-          Voltar ao Início
+          {hasPoints ? 'Jogar de novo' : 'Tentar novamente'}
         </button>
       </div>
     );
@@ -416,7 +470,7 @@ export default function PlayerScreen() {
 
   return (
     <div style={styles.page}>
-      {/* Header: Score + Timer + Combo */}
+      {/* Header: Score + Timer + Abandon */}
       <div style={styles.header}>
         <div style={styles.scoreBlock}>
           <span style={styles.scoreLabel}>Pontos</span>
@@ -433,17 +487,20 @@ export default function PlayerScreen() {
             {timeRemaining}s
           </span>
         </div>
-        <div style={styles.comboBlock}>
-          <span style={styles.comboLabel}>Combo</span>
-          <span style={styles.comboValue}>{state.myCombo}x</span>
-        </div>
+        <button
+          style={styles.abandonButton}
+          onClick={() => window.location.href = '/'}
+          aria-label="Abandonar partida"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Theme Word */}
       <div style={styles.themeSection}>
         <span style={styles.themeLabel}>Palavra-tema</span>
         <span style={styles.themeWord}>{themeWord}</span>
-        <span style={styles.themeHint}>Digite palavras relacionadas!</span>
+        <span style={styles.themeHint}>Acertos dão +5s de tempo!</span>
       </div>
 
       {/* Word History (scrollable middle) */}
@@ -456,6 +513,9 @@ export default function PlayerScreen() {
         onSubmit={handleSubmitWord}
         disabled={timeRemaining <= 0}
       />
+
+      {/* Floating points animation */}
+      <FloatingPoints trigger={floatTrigger} />
     </div>
   );
 }

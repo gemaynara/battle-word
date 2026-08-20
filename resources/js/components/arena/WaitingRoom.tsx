@@ -10,82 +10,93 @@ interface WaitingRoomProps {
 }
 
 export default function WaitingRoom({ code, players, qrUrl, isHost, onStartRound }: WaitingRoomProps) {
+  const handleCloseRoom = () => {
+    if (confirm('Tem certeza que deseja encerrar a sala?')) {
+      window.location.href = '/';
+    }
+  };
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-8">
-      {/* Game Code - large and readable from distance */}
-      <div className="mb-8 text-center">
-        <p className="text-2xl font-medium text-indigo-300 uppercase tracking-wider">Código do Jogo</p>
-        <p className="mt-2 font-mono font-bold text-white tracking-[0.3em]" style={{ fontSize: '96px', lineHeight: 1.1 }}>
-          {code}
-        </p>
-      </div>
-
-      {/* QR Code */}
-      <div className="mb-8 rounded-2xl bg-white p-6">
-        <QRCodeSVG value={qrUrl} size={220} level="M" />
-      </div>
-
-      {/* Instruction */}
-      <p className="mb-8 text-xl text-indigo-200">
-        Escaneie o QR Code ou digite o código no celular
-      </p>
-
-      {/* Rules Balloon */}
-      <div className="mb-8 w-full max-w-lg rounded-2xl bg-indigo-500/20 border border-indigo-400/30 backdrop-blur-sm p-5">
-        <h3 className="mb-2 text-center text-lg font-semibold text-indigo-200">Como Jogar</h3>
-        <p className="text-center text-indigo-100 leading-relaxed">
-          Forme palavras com as letras disponíveis. Quanto maior a palavra, mais pontos!
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2 text-sm">
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">2 letras = 1pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">3 = 3pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">4 = 5pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">5 = 8pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">6 = 12pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-indigo-200">7 = 17pt</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-yellow-300">8+ = 25pt</span>
+    <div className="min-h-screen overflow-y-auto bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 pb-12">
+      <div className="mx-auto flex max-w-lg flex-col items-center">
+        {/* Game Code */}
+        <div className="mb-6 text-center">
+          <p className="text-lg font-medium text-indigo-300 uppercase tracking-wider">Código do Jogo</p>
+          <p className="mt-1 font-mono font-bold text-white tracking-[0.3em]" style={{ fontSize: '56px', lineHeight: 1.2 }}>
+            {code}
+          </p>
         </div>
-        <p className="mt-3 text-center text-sm text-indigo-300">
-          Acertos consecutivos = combo (até 5x) &nbsp;|&nbsp; Usar todas as letras = +10 bônus
-        </p>
-      </div>
 
-      {/* Connected Players */}
-      <div className="mb-8 w-full max-w-lg rounded-2xl bg-white/10 backdrop-blur-sm p-6">
-        <h2 className="mb-4 text-center text-2xl font-semibold text-white">
-          Jogadores Conectados ({players.length})
-        </h2>
-        {players.length === 0 ? (
-          <p className="text-center text-lg text-indigo-300">Aguardando jogadores...</p>
-        ) : (
-          <ul className="space-y-2">
-            {players.map((player) => (
-              <li
-                key={player.id}
-                className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-3"
-              >
-                <span className={`h-3 w-3 rounded-full ${player.is_connected ? 'bg-green-400' : 'bg-gray-500'}`} />
-                <span className="text-lg font-medium text-white">{player.nickname}</span>
-                {player.is_host && (
-                  <span className="ml-auto rounded-full bg-indigo-500/30 px-3 py-0.5 text-sm text-indigo-200">
-                    Host
-                  </span>
-                )}
-              </li>
-            ))}
+        {/* QR Code */}
+        <div className="mb-6 rounded-2xl bg-white p-4">
+          <QRCodeSVG value={qrUrl} size={180} level="M" />
+        </div>
+
+        {/* Instruction */}
+        <p className="mb-6 text-center text-base text-indigo-200">
+          Escaneie o QR Code ou digite o código no celular
+        </p>
+
+        {/* Rules */}
+        <div className="mb-6 w-full rounded-2xl bg-indigo-500/20 border border-indigo-400/30 backdrop-blur-sm p-4">
+          <h3 className="mb-2 text-center text-base font-semibold text-indigo-200">Como Jogar</h3>
+          <ul className="space-y-1.5 text-sm text-indigo-100">
+            <li>• Uma <strong>palavra-tema</strong> aparece na tela</li>
+            <li>• Digite palavras que tenham <strong>relação com o tema</strong></li>
+            <li>• Quanto mais relacionada, mais pontos (até 100)</li>
+            <li>• Você começa com <strong>30 segundos</strong></li>
+            <li>• Cada acerto dá <strong>+5 segundos</strong> extras</li>
+            <li>• A palavra precisa existir no dicionário</li>
           </ul>
+        </div>
+
+        {/* Connected Players */}
+        <div className="mb-6 w-full rounded-2xl bg-white/10 backdrop-blur-sm p-4">
+          <h2 className="mb-3 text-center text-lg font-semibold text-white">
+            Jogadores ({players.length})
+          </h2>
+          {players.length === 0 ? (
+            <p className="text-center text-base text-indigo-300">Aguardando jogadores...</p>
+          ) : (
+            <ul className="space-y-2">
+              {players.map((player) => (
+                <li
+                  key={player.id}
+                  className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-2.5"
+                >
+                  <span className={`h-3 w-3 rounded-full ${player.is_connected ? 'bg-green-400' : 'bg-gray-500'}`} />
+                  <span className="text-base font-medium text-white">{player.nickname}</span>
+                  {player.is_host && (
+                    <span className="ml-auto rounded-full bg-indigo-500/30 px-2.5 py-0.5 text-xs text-indigo-200">
+                      Host
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Buttons */}
+        {isHost && (
+          <div className="flex w-full flex-col gap-3">
+            {players.length >= 1 && (
+              <button
+                onClick={onStartRound}
+                className="w-full rounded-xl bg-green-500 px-8 py-3.5 text-lg font-bold text-white transition hover:bg-green-400 active:scale-95"
+              >
+                Iniciar Rodada
+              </button>
+            )}
+            <button
+              onClick={handleCloseRoom}
+              className="w-full rounded-xl bg-red-500/20 border border-red-400/30 px-8 py-3 text-base font-semibold text-red-300 transition hover:bg-red-500/30"
+            >
+              Encerrar Sala
+            </button>
+          </div>
         )}
       </div>
-
-      {/* Start Round Button (host only) */}
-      {isHost && players.length >= 1 && (
-        <button
-          onClick={onStartRound}
-          className="rounded-xl bg-green-500 px-10 py-4 text-2xl font-bold text-white transition hover:bg-green-400 active:scale-95"
-        >
-          Iniciar Rodada
-        </button>
-      )}
     </div>
   );
 }

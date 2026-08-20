@@ -16,11 +16,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const gameApi = {
-  createGame: async (mode: string, category: string = 'aleatorio'): Promise<CreateGameResponse> => {
+  createGame: async (mode: string, category: string = 'aleatorio', nickname: string = 'Jogador'): Promise<CreateGameResponse> => {
     const response = await fetch(`${API_BASE}/games`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ mode, category }),
+      body: JSON.stringify({ mode, category, nickname }),
     });
     return handleResponse<CreateGameResponse>(response);
   },
@@ -64,6 +64,13 @@ export const gameApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ player_token: playerToken }),
+    });
+    return handleResponse(response);
+  },
+
+  getWeeklyRanking: async (): Promise<{ week: string; ranking: Array<{ position: number; nickname: string; best_score: number }> }> => {
+    const response = await fetch(`${API_BASE}/ranking/weekly`, {
+      headers: { Accept: 'application/json' },
     });
     return handleResponse(response);
   },

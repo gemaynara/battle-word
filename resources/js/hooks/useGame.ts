@@ -18,7 +18,8 @@ export type GameAction =
   | { type: 'SCORE_UPDATED'; payload: { scoreboard: ScoreEntry[] } }
   | { type: 'ROUND_ENDED'; payload: { round_number: number; final_scores: ScoreEntry[]; highlights?: Highlights; base_word?: string } }
   | { type: 'SET_MY_WORD'; payload: WordSubmission }
-  | { type: 'SET_TIME'; payload: number };
+  | { type: 'SET_TIME'; payload: number }
+  | { type: 'ADD_TIME_BONUS'; payload: number };
 
 export interface ExtendedGameState extends GameState {
   highlights: Highlights | null;
@@ -129,6 +130,13 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
 
     case 'SET_TIME': {
       return { ...state, timeRemaining: action.payload };
+    }
+
+    case 'ADD_TIME_BONUS': {
+      const round = state.round
+        ? { ...state.round, duration_seconds: state.round.duration_seconds + action.payload }
+        : null;
+      return { ...state, round };
     }
 
     default:

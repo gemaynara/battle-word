@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\GameHistoryController;
+use App\Http\Controllers\RankingController;
 use App\Http\Controllers\RoundController;
 use App\Http\Controllers\WordSubmissionController;
 use Illuminate\Support\Facades\Route;
@@ -10,12 +11,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Word Battle API routes. Game-related endpoints use the game code as
-| identifier. Player authentication uses X-Player-Token header or
-| player_token body parameter via the resolve.player middleware.
-|
 */
+
+// Ranking
+Route::get('/ranking/weekly', [RankingController::class, 'weekly']);
 
 // Game history (requires authenticated user)
 Route::get('/games/history', [GameHistoryController::class, 'index'])

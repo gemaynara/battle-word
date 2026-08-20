@@ -7,35 +7,37 @@ use Illuminate\Console\Command;
 
 class ImportDictionary extends Command
 {
-    /**
-     * The name and signature of the console command.
-     */
     protected $signature = 'dictionary:import
-        {file : Path to word list file}
-        {--min-length=2 : Minimum word length}
-        {--max-length=15 : Maximum word length}';
+        {file : Path to word list file (one word per line, or CSV word,score)}
+        {--min-length=3 : Minimum word length}
+        {--max-length=12 : Maximum word length}
+        {--max-icf=9.5 : Maximum ICF score (lower = more common, only for ICF files)}
+        {--format=plain : File format: plain (one word per line) or icf (word,score)}
+        {--fresh : Truncate the table before importing}';
 
-    /**
-     * The console command description.
-     */
-    protected $description = 'Import words from a text file into the dictionary_words table (removes accents, filters by length)';
+    protected $description = 'Import words from a text/ICF file into the dictionary_words table';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $filePath = $this->argument('file');
         $minLength = (int) $this->option('min-length');
         $maxLength = (int) $this->option('max-length');
+        $maxIcf = (float) $this->option('max-icf');
+        $format = $this->option('format');
+        $fresh = $this->option('fresh');
 
         if (!file_exists($filePath)) {
             $this->error("File not found: {$filePath}");
             return self::FAILURE;
         }
 
+        if ($fresh) {
+            $this->info("Truncating dictionary_words table...");
+            DictionaryWord::truncate();
+        }
+
         $this->info("Importing words from: {$filePath}");
-        $this->info("Filter: {$minLength}-{$maxLength} characters");
+        $this->info("Filter: {$minLength}-{$maxLength} chars, format={$format}" . ($format === 'icf' ? ", max_icf={$maxIcf}" : ''));
 
         $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
@@ -57,24 +59,39 @@ class ImportDictionary extends Command
         $seen = [];
 
         foreach ($lines as $line) {
-            $original = trim($line);
+            $bar->advance();
 
-            // Remove accents and convert to uppercase
+            if ($format === 'icf') {
+                $parts = explode(',', $line, 2);
+                if (count($parts) !== 2) {
+                    $skipped++;
+                    continue;
+                }
+                $original = trim($parts[0]);
+                $icfScore = (float) trim($parts[1]);
+
+                // Skip words with ICF higher than threshold (too rare)
+                if ($icfScore > $maxIcf) {
+                    $skipped++;
+                    continue;
+                }
+            } else {
+                $original = trim($line);
+            }
+
+            // Normalize: remove accents, uppercase
             $word = $this->normalizeWord($original);
-
             $length = mb_strlen($word);
 
-            // Skip empty, too short, too long, or non-alpha words
+            // Filter
             if ($word === '' || $length < $minLength || $length > $maxLength || !$this->isAlphaOnly($word)) {
                 $skipped++;
-                $bar->advance();
                 continue;
             }
 
-            // Skip duplicates within this import (same normalized form)
+            // Deduplicate
             if (isset($seen[$word])) {
                 $skipped++;
-                $bar->advance();
                 continue;
             }
             $seen[$word] = true;
@@ -93,11 +110,8 @@ class ImportDictionary extends Command
                 $imported += count($chunk);
                 $chunk = [];
             }
-
-            $bar->advance();
         }
 
-        // Insert remaining chunk
         if (!empty($chunk)) {
             DictionaryWord::upsert($chunk, ['word'], ['length', 'updated_at']);
             $imported += count($chunk);
@@ -109,25 +123,15 @@ class ImportDictionary extends Command
         $this->info("Import complete!");
         $this->info("  Imported/Updated: {$imported}");
         $this->info("  Skipped: {$skipped}");
-        $this->info("  Duplicates removed: " . ($totalLines - $imported - $skipped));
 
         return self::SUCCESS;
     }
 
-    /**
-     * Normalize a word: remove accents and convert to uppercase.
-     */
     private function normalizeWord(string $word): string
     {
-        // Transliterate accented characters to ASCII equivalents
-        $word = $this->removeAccents($word);
-
-        return mb_strtoupper($word);
+        return mb_strtoupper($this->removeAccents($word));
     }
 
-    /**
-     * Remove accents/diacritics from a string.
-     */
     private function removeAccents(string $str): string
     {
         $map = [
@@ -148,9 +152,6 @@ class ImportDictionary extends Command
         return strtr($str, $map);
     }
 
-    /**
-     * Check if a string contains only A-Z characters.
-     */
     private function isAlphaOnly(string $word): bool
     {
         return preg_match('/^[A-Z]+$/', $word) === 1;

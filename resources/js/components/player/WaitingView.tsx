@@ -9,29 +9,29 @@ const styles = {
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh',
+    minHeight: '100dvh',
     padding: '24px 16px',
     backgroundColor: '#0f172a',
     color: '#f8fafc',
     textAlign: 'center' as const,
   },
   checkmark: {
-    fontSize: '48px',
-    marginBottom: '16px',
+    fontSize: '40px',
+    marginBottom: '12px',
   },
   title: {
-    fontSize: '20px',
+    fontSize: '18px',
     fontWeight: '700' as const,
-    marginBottom: '8px',
+    marginBottom: '6px',
   },
   code: {
     color: '#a5b4fc',
     fontWeight: '700' as const,
   },
   nickname: {
-    fontSize: '16px',
+    fontSize: '15px',
     color: '#94a3b8',
-    marginBottom: '32px',
+    marginBottom: '24px',
   },
   waiting: {
     fontSize: '14px',
@@ -60,30 +60,33 @@ export default function WaitingView({ gameCode, nickname }: WaitingViewProps) {
       <style>{styles.keyframes}</style>
       <div style={styles.checkmark}>✅</div>
       <h1 style={styles.title}>
-        Você entrou no jogo <span style={styles.code}>{gameCode}</span>!
+        Você entrou no jogo <span style={styles.code}>{gameCode}</span>
       </h1>
       <p style={styles.nickname}>Jogando como: <strong>{nickname}</strong></p>
 
-      {/* Rules Balloon */}
       <div style={{
         backgroundColor: 'rgba(99, 102, 241, 0.15)',
         border: '1px solid rgba(99, 102, 241, 0.3)',
         borderRadius: '12px',
-        padding: '16px 20px',
+        padding: '14px 16px',
         marginBottom: '24px',
-        maxWidth: '320px',
-        textAlign: 'center' as const,
+        maxWidth: '300px',
+        width: '100%',
+        textAlign: 'left' as const,
       }}>
-        <p style={{ fontSize: '14px', color: '#c7d2fe', marginBottom: '8px', fontWeight: '600' }}>
-          Como Pontuar
+        <p style={{ fontSize: '13px', color: '#c7d2fe', marginBottom: '8px', fontWeight: '600', textAlign: 'center' }}>
+          Regras
         </p>
-        <p style={{ fontSize: '13px', color: '#a5b4fc', lineHeight: '1.5', margin: 0 }}>
-          Forme palavras com as letras disponíveis. Quanto maior, mais pontos!
-          Acertos seguidos = combo (até 5x). Use todas as letras = +10 bônus!
-        </p>
+        <ul style={{ fontSize: '12px', color: '#a5b4fc', lineHeight: '1.7', margin: 0, paddingLeft: '16px' }}>
+          <li>Uma palavra-tema aparece na tela</li>
+          <li>Digite palavras relacionadas ao tema</li>
+          <li>Quanto mais relacionada, mais pontos</li>
+          <li>Cada acerto dá +5 segundos de tempo</li>
+          <li>A palavra precisa existir no dicionário</li>
+        </ul>
       </div>
 
-      <p style={styles.waiting}>Aguardando o host iniciar a rodada...</p>
+      <p style={styles.waiting}>Aguardando o host iniciar...</p>
       <span style={styles.pulse} />
     </div>
   );

@@ -34,6 +34,7 @@ export interface WordSubmissionResult {
   is_long_word: boolean;
   player_total_score: number;
   rejection_reason: string | null;
+  time_bonus?: number;
 }
 
 export interface ScoreEntry {

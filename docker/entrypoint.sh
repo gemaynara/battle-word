@@ -23,8 +23,9 @@ php /var/www/html/artisan migrate --force || true
 # Importar dicionário pt-BR (se tabela estiver vazia)
 WORD_COUNT=$(php /var/www/html/artisan tinker --execute="echo \App\Models\DictionaryWord::count();" 2>/dev/null | tail -1)
 if [ "$WORD_COUNT" = "0" ] || [ -z "$WORD_COUNT" ]; then
-    echo "==> Importing pt-BR dictionary..."
-    php /var/www/html/artisan dictionary:import database/data/lexico.txt --min-length=3 --max-length=12 || true
+    echo "==> Importing pt-BR dictionary (common words from ICF)..."
+    php /var/www/html/artisan dictionary:import database/data/icf.txt --format=icf --max-icf=14 --min-length=3 --max-length=12 --fresh || true
+    php /var/www/html/artisan db:seed --class=CategorizedDictionarySeeder --force || true
     echo "==> Dictionary import complete"
 fi
 

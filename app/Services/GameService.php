@@ -23,11 +23,11 @@ class GameService
      *
      * @throws \RuntimeException If unable to generate unique code after max attempts
      */
-    public function createGame(string $mode = 'arena', ?int $hostUserId = null, string $category = 'aleatorio'): Game
+    public function createGame(string $mode = 'arena', ?int $hostUserId = null, string $category = 'aleatorio', string $nickname = 'Jogador'): Game
     {
         $code = $this->generateUniqueCode();
 
-        return DB::transaction(function () use ($code, $mode, $hostUserId, $category) {
+        return DB::transaction(function () use ($code, $mode, $hostUserId, $category, $nickname) {
             $game = Game::create([
                 'code' => $code,
                 'status' => 'waiting',
@@ -39,11 +39,10 @@ class GameService
             ]);
 
             // Register host as first player
-            $hostNickname = $mode === 'vs_computer' ? 'Jogador' : 'Host';
             GamePlayer::create([
                 'game_id' => $game->id,
                 'user_id' => $hostUserId,
-                'nickname' => $hostNickname,
+                'nickname' => $nickname,
                 'is_host' => true,
                 'is_connected' => true,
                 'joined_at' => now(),
