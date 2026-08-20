@@ -123,20 +123,25 @@ class WordSubmissionController extends Controller
             }
 
             // Broadcast WordSubmitted event
-            event(new WordSubmitted(
-                game: $game,
-                playerNickname: $player->nickname,
-                word: $word,
-                points: $points,
-                isValid: true,
-            ));
+            try {
+                event(new WordSubmitted(
+                    game: $game,
+                    playerNickname: $player->nickname,
+                    word: $word,
+                    points: $points,
+                    isValid: true,
+                ));
 
-            // Build scoreboard and broadcast ScoreUpdated
-            $scoreboard = $this->buildScoreboard($game);
-            event(new ScoreUpdated(
-                game: $game,
-                scoreboard: $scoreboard,
-            ));
+                // Build scoreboard and broadcast ScoreUpdated
+                $scoreboard = $this->buildScoreboard($game);
+                event(new ScoreUpdated(
+                    game: $game,
+                    scoreboard: $scoreboard,
+                ));
+            } catch (\Exception $e) {
+                // Broadcasting failure should not break the API response
+                \Illuminate\Support\Facades\Log::warning('Broadcast failed: ' . $e->getMessage());
+            }
         }
 
         return response()->json([
