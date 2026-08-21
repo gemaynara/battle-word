@@ -349,6 +349,25 @@ export default function PlayerScreen() {
     setView('waiting');
   }, []);
 
+  const handlePlayAgain = useCallback(async () => {
+    if (!code || !playerToken) {
+      window.location.href = '/';
+      return;
+    }
+    try {
+      // Create new round and start it
+      await gameApi.playAgain(code, playerToken);
+      await gameApi.startRound(code, playerToken);
+      // Reset state and go back to playing
+      dispatch({ type: 'ROUND_STARTED', payload: { round_number: 0, letters: '', started_at: '', duration_seconds: 30 } });
+      // Reload to get fresh state
+      window.location.reload();
+    } catch {
+      // If play again fails, just go home
+      window.location.href = '/';
+    }
+  }, [code, playerToken, dispatch]);
+
   const handleSubmitWord = useCallback(async (word: string) => {
     if (!code || !playerToken) return;
     try {
@@ -479,12 +498,25 @@ export default function PlayerScreen() {
           </>
         )}
 
-        <button
-          style={styles.homeButton}
-          onClick={() => window.location.href = '/'}
-        >
-          {hasPoints ? 'Jogar de novo' : 'Tentar novamente'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '280px' }}>
+          <button
+            style={styles.homeButton}
+            onClick={handlePlayAgain}
+          >
+            Jogar novamente
+          </button>
+          <button
+            style={{
+              ...styles.homeButton,
+              backgroundColor: 'transparent',
+              border: '1px solid #475569',
+              color: '#94a3b8',
+            }}
+            onClick={() => window.location.href = '/'}
+          >
+            Voltar ao início
+          </button>
+        </div>
       </div>
     );
   }
